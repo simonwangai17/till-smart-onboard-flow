@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { UserPlus, Users, Eye, EyeOff } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface User {
   userId: string;
@@ -20,42 +21,39 @@ interface User {
 
 const UserManagement = () => {
   const { toast } = useToast();
+  const { userProfile } = useAuth();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [newUser, setNewUser] = useState({
     userId: '',
     password: '',
     role: 'agent',
-    name: ''
+    name: '',
+    email: ''
   });
 
-  // Mock existing users data
-  const [users, setUsers] = useState<User[]>([
-    {
-      userId: 'AGENT001',
-      password: 'password123',
-      role: 'agent',
-      name: 'John Doe',
-      createdAt: '2024-01-15T10:30:00Z'
-    },
-    {
-      userId: 'AGENT002',
-      password: 'password123',
-      role: 'agent',
-      name: 'Jane Smith',
-      createdAt: '2024-01-16T14:20:00Z'
-    },
-    {
-      userId: 'ADMIN001',
-      password: 'admin123',
-      role: 'admin',
-      name: 'Admin User',
-      createdAt: '2024-01-10T09:00:00Z'
-    }
-  ]);
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
-  const handleCreateUser = () => {
-    if (!newUser.userId || !newUser.password || !newUser.name) {
+  const fetchUsers = async () => {
+    if (userProfile?.role !== 'admin') return;
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setUsers(data);
+    }
+    setLoading(false);
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUser.userId || !newUser.password || !newUser.name || !newUser.email) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
@@ -64,29 +62,35 @@ const UserManagement = () => {
       return;
     }
 
-    // Check if user ID already exists
-    if (users.some(user => user.userId === newUser.userId)) {
+    try {
+      // Create auth user
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: newUser.email,
+        password: newUser.password,
+        user_metadata: {
+          name: newUser.name,
+          user_id: newUser.userId,
+          role: newUser.role
+        }
+      });
+
+      if (authError) throw authError;
+
       toast({
-        title: "User ID Exists",
-        description: "This User ID is already taken. Please choose a different one.",
+        title: "User Created",
+        description: `User ${newUser.name} has been created successfully`,
+      });
+
+      setNewUser({ userId: '', password: '', role: 'agent', name: '', email: '' });
+      setShowCreateDialog(false);
+      fetchUsers();
+    } catch (error: any) {
+      toast({
+        title: "Error Creating User",
+        description: error.message,
         variant: "destructive"
       });
-      return;
     }
-
-    const user: User = {
-      ...newUser,
-      createdAt: new Date().toISOString()
-    };
-
-    setUsers(prev => [...prev, user]);
-    setNewUser({ userId: '', password: '', role: 'agent', name: '' });
-    setShowCreateDialog(false);
-
-    toast({
-      title: "User Created",
-      description: `User ${user.name} has been created successfully`,
-    });
   };
 
   const getRoleBadgeColor = (role: string) => {
@@ -99,6 +103,14 @@ const UserManagement = () => {
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+  if (userProfile?.role !== 'admin') {
+    return (
+      <div className="text-center py-8">
+        <p className="text-mpesa-gray">Access denied. Admin privileges required.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -130,6 +142,16 @@ const UserManagement = () => {
                   value={newUser.name}
                   onChange={(e) => setNewUser(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Enter full name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="Enter email address"
                 />
               </div>
               <div>
@@ -250,44 +272,44 @@ const UserManagement = () => {
           <CardDescription>Manage system users and their roles</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>User ID</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Password</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.userId}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>
-                      <code className="bg-gray-100 px-2 py-1 rounded text-sm">
-                        {user.userId}
-                      </code>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getRoleBadgeColor(user.role)}>
-                        {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <code className="bg-gray-100 px-2 py-1 rounded text-sm">
-                        {user.password}
-                      </code>
-                    </TableCell>
+          {loading ? (
+            <div className="text-center py-8">
+              <p className="text-mpesa-gray">Loading users...</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>User ID</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Created</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell>
+                        <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+                          {user.user_id}
+                        </code>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getRoleBadgeColor(user.role)}>
+                          {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

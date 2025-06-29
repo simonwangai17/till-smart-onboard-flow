@@ -3,11 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Camera } from 'lucide-react';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
 
 interface FormData {
   fullName: string;
@@ -31,6 +29,7 @@ const CustomerRegistration = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { submitTillRegistration } = useSupabaseData();
 
   const validatePhoneNumber = (number: string) => {
     const kenyanRegex = /^2547\d{8}$/;
@@ -110,30 +109,14 @@ const CustomerRegistration = () => {
     setIsSubmitting(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Save to localStorage for demo purposes
-      const submissions = JSON.parse(localStorage.getItem('submissions') || '[]');
-      const newSubmission = {
-        id: Date.now().toString(),
-        ...formData,
-        submittedAt: new Date().toISOString(),
-        status: 'pending'
-      };
-      submissions.push(newSubmission);
-      localStorage.setItem('submissions', JSON.stringify(submissions));
-
-      // Save to till registrations for reports
-      const tillRegistrations = JSON.parse(localStorage.getItem('till-registrations') || '[]');
-      tillRegistrations.push({
-        id: Date.now(),
-        customerName: formData.fullName,
-        tillNumber: formData.tillNumber,
-        date: new Date().toISOString(),
-        status: 'pending'
+      await submitTillRegistration({
+        customer_name: formData.fullName,
+        phone_number: formData.phoneNumber,
+        id_number: formData.idNumber,
+        till_number: formData.tillNumber,
+        store_number: formData.storeNumber,
+        serial_number: formData.serialNumber
       });
-      localStorage.setItem('till-registrations', JSON.stringify(tillRegistrations));
 
       toast({
         title: "Registration Successful!",
@@ -150,10 +133,10 @@ const CustomerRegistration = () => {
         serialNumber: ''
       });
 
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Registration Failed",
-        description: "There was an error submitting the registration. Please try again.",
+        description: error.message || "There was an error submitting the registration. Please try again.",
         variant: "destructive",
       });
     } finally {

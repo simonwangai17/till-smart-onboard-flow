@@ -1,5 +1,6 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext } from 'react';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
 
 interface WalletContextType {
   balance: number;
@@ -18,29 +19,21 @@ export const useWallet = () => {
 };
 
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [balance, setBalance] = useState(() => {
-    const saved = localStorage.getItem('wallet-balance');
-    return saved ? parseFloat(saved) : 0;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('wallet-balance', balance.toString());
-  }, [balance]);
+  const { walletBalance } = useSupabaseData();
 
   const addToBalance = (amount: number) => {
-    setBalance(prev => prev + amount);
+    // This is now handled by Supabase transactions
+    console.log(`Adding ${amount} to balance`);
   };
 
   const deductFromBalance = (amount: number): boolean => {
-    if (balance >= amount) {
-      setBalance(prev => prev - amount);
-      return true;
-    }
-    return false;
+    // This is now handled by Supabase transactions
+    console.log(`Deducting ${amount} from balance`);
+    return walletBalance >= amount;
   };
 
   return (
-    <WalletContext.Provider value={{ balance, addToBalance, deductFromBalance }}>
+    <WalletContext.Provider value={{ balance: walletBalance, addToBalance, deductFromBalance }}>
       {children}
     </WalletContext.Provider>
   );

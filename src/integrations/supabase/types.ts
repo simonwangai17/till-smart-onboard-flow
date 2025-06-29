@@ -9,13 +9,206 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      airtime_purchases: {
+        Row: {
+          agent_id: string | null
+          amount: number
+          created_at: string | null
+          id: string
+          phone_number: string
+          provider: string
+        }
+        Insert: {
+          agent_id?: string | null
+          amount: number
+          created_at?: string | null
+          id?: string
+          phone_number: string
+          provider: string
+        }
+        Update: {
+          agent_id?: string | null
+          amount?: number
+          created_at?: string | null
+          id?: string
+          phone_number?: string
+          provider?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "airtime_purchases_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bundle_purchases: {
+        Row: {
+          agent_id: string | null
+          amount: number
+          bundle_name: string
+          created_at: string | null
+          id: string
+          phone_number: string
+          provider: string
+        }
+        Insert: {
+          agent_id?: string | null
+          amount: number
+          bundle_name: string
+          created_at?: string | null
+          id?: string
+          phone_number: string
+          provider: string
+        }
+        Update: {
+          agent_id?: string | null
+          amount?: number
+          bundle_name?: string
+          created_at?: string | null
+          id?: string
+          phone_number?: string
+          provider?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bundle_purchases_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          role: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          name: string
+          role: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          role?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      till_registrations: {
+        Row: {
+          agent_id: string | null
+          created_at: string | null
+          customer_name: string
+          id: string
+          id_number: string
+          phone_number: string
+          serial_number: string
+          status: string
+          store_number: string
+          till_number: string
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          created_at?: string | null
+          customer_name: string
+          id?: string
+          id_number: string
+          phone_number: string
+          serial_number: string
+          status?: string
+          store_number: string
+          till_number: string
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          created_at?: string | null
+          customer_name?: string
+          id?: string
+          id_number?: string
+          phone_number?: string
+          serial_number?: string
+          status?: string
+          store_number?: string
+          till_number?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "till_registrations_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallet_transactions: {
+        Row: {
+          agent_id: string | null
+          amount: number
+          created_at: string | null
+          description: string
+          id: string
+          reference_id: string | null
+          reference_type: string | null
+          transaction_type: string
+        }
+        Insert: {
+          agent_id?: string | null
+          amount: number
+          created_at?: string | null
+          description: string
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          transaction_type: string
+        }
+        Update: {
+          agent_id?: string | null
+          amount?: number
+          created_at?: string | null
+          description?: string
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_wallet_balance: {
+        Args: { user_id: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
