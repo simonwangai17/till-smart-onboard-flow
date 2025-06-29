@@ -1,89 +1,98 @@
-
 import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Scan, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Camera } from 'lucide-react';
 
-interface CustomerData {
-  name: string;
+interface FormData {
+  fullName: string;
   phoneNumber: string;
   idNumber: string;
-  storeNumber: string;
   tillNumber: string;
+  storeNumber: string;
   serialNumber: string;
 }
 
 const CustomerRegistration = () => {
-  const { toast } = useToast();
-  const [isScanning, setIsScanning] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [scanComplete, setScanComplete] = useState(false);
-  const [formData, setFormData] = useState<CustomerData>({
-    name: '',
+  const [formData, setFormData] = useState<FormData>({
+    fullName: '',
     phoneNumber: '',
     idNumber: '',
-    storeNumber: '',
     tillNumber: '',
+    storeNumber: '',
     serialNumber: ''
   });
 
-  const [errors, setErrors] = useState<Partial<CustomerData>>({});
+  const [isScanning, setIsScanning] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const validatePhoneNumber = (number: string) => {
+    const kenyanRegex = /^2547\d{8}$/;
+    return kenyanRegex.test(number);
+  };
+
+  const validateIDNumber = (id: string) => {
+    const idRegex = /^\d{7,8}$/;
+    return idRegex.test(id);
+  };
+
+  const validateTillNumber = (till: string) => {
+    const tillRegex = /^\d{6,8}$/;
+    return tillRegex.test(till);
+  };
+
+  const validateSerialNumber = (serial: string) => {
+    const serialRegex = /^[a-zA-Z0-9]{10,}$/;
+    return serialRegex.test(serial);
+  };
 
   const validateForm = () => {
-    const newErrors: Partial<CustomerData> = {};
+    if (!formData.fullName || !formData.phoneNumber || !formData.idNumber || !formData.tillNumber || !formData.storeNumber || !formData.serialNumber) {
+      return false;
+    }
 
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!formData.phoneNumber.match(/^254\d{9}$/)) {
-      newErrors.phoneNumber = 'Phone number must start with 254 and be 12 digits';
+    if (!validatePhoneNumber(formData.phoneNumber)) {
+      return false;
     }
-    if (!formData.idNumber.match(/^\d{7,8}$/)) {
-      newErrors.idNumber = 'ID number must be 7-8 digits';
-    }
-    if (!formData.storeNumber.trim()) newErrors.storeNumber = 'Store number is required';
-    if (!formData.tillNumber.match(/^\d{6,7}$/)) {
-      newErrors.tillNumber = 'Till number must be 6-7 digits';
-    }
-    if (!formData.serialNumber.trim()) newErrors.serialNumber = 'Serial number is required';
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if (!validateIDNumber(formData.idNumber)) {
+      return false;
+    }
+
+    if (!validateTillNumber(formData.tillNumber)) {
+      return false;
+    }
+
+    if (!validateSerialNumber(formData.serialNumber)) {
+      return false;
+    }
+
+    return true;
   };
 
-  const handleInputChange = (field: keyof CustomerData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-
-    // Auto-format phone number
-    if (field === 'phoneNumber' && !value.startsWith('254') && value.length > 0) {
-      if (value.startsWith('0')) {
-        setFormData(prev => ({ ...prev, phoneNumber: '254' + value.slice(1) }));
-      } else if (!value.startsWith('254')) {
-        setFormData(prev => ({ ...prev, phoneNumber: '254' + value }));
-      }
-    }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prevState => ({
+      ...prevState,
+      [name]: value
+    }));
   };
 
-  const simulateScanning = () => {
+  const handleScan = () => {
     setIsScanning(true);
-    setScanComplete(false);
-    
-    // Simulate OCR/Barcode scanning delay
     setTimeout(() => {
-      const mockSerial = 'SN' + Math.random().toString(36).substr(2, 10).toUpperCase();
-      setFormData(prev => ({ ...prev, serialNumber: mockSerial }));
+      setFormData(prevState => ({
+        ...prevState,
+        serialNumber: 'SCANNED12345'
+      }));
       setIsScanning(false);
-      setScanComplete(true);
-      toast({
-        title: "Serial Number Scanned",
-        description: `Captured: ${mockSerial}`,
-      });
-    }, 2000);
+    }, 3000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,209 +101,173 @@ const CustomerRegistration = () => {
     if (!validateForm()) {
       toast({
         title: "Validation Error",
-        description: "Please fix the errors below",
-        variant: "destructive"
+        description: "Please fill in all required fields correctly.",
+        variant: "destructive",
       });
       return;
     }
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      toast({
-        title: "Registration Successful",
-        description: `Customer ${formData.name} has been registered successfully!`,
-      });
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
+      // Save to localStorage for demo purposes
+      const submissions = JSON.parse(localStorage.getItem('submissions') || '[]');
+      const newSubmission = {
+        id: Date.now().toString(),
+        ...formData,
+        submittedAt: new Date().toISOString(),
+        status: 'pending'
+      };
+      submissions.push(newSubmission);
+      localStorage.setItem('submissions', JSON.stringify(submissions));
+
+      // Save to till registrations for reports
+      const tillRegistrations = JSON.parse(localStorage.getItem('till-registrations') || '[]');
+      tillRegistrations.push({
+        id: Date.now(),
+        customerName: formData.fullName,
+        tillNumber: formData.tillNumber,
+        date: new Date().toISOString(),
+        status: 'pending'
+      });
+      localStorage.setItem('till-registrations', JSON.stringify(tillRegistrations));
+
+      toast({
+        title: "Registration Successful!",
+        description: "Customer till registration has been submitted for approval. You'll earn KSH 100 once approved.",
+      });
+
       // Reset form
       setFormData({
-        name: '',
+        fullName: '',
         phoneNumber: '',
         idNumber: '',
-        storeNumber: '',
         tillNumber: '',
+        storeNumber: '',
         serialNumber: ''
       });
-      setScanComplete(false);
+
+    } catch (error) {
+      toast({
+        title: "Registration Failed",
+        description: "There was an error submitting the registration. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">Customer Registration</h3>
-        <p className="text-mpesa-gray">Register new M-Pesa customers and their till devices</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Registration Form */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Customer Details</CardTitle>
-              <CardDescription>Fill in all required customer information</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="name">Full Name *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      className={errors.name ? 'border-red-500' : ''}
-                      placeholder="Enter customer's full name"
-                    />
-                    {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="phone">Phone Number *</Label>
-                    <Input
-                      id="phone"
-                      value={formData.phoneNumber}
-                      onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                      className={errors.phoneNumber ? 'border-red-500' : ''}
-                      placeholder="254XXXXXXXXX"
-                      maxLength={12}
-                    />
-                    {errors.phoneNumber && <p className="text-sm text-red-500 mt-1">{errors.phoneNumber}</p>}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="id">ID Number *</Label>
-                    <Input
-                      id="id"
-                      value={formData.idNumber}
-                      onChange={(e) => handleInputChange('idNumber', e.target.value)}
-                      className={errors.idNumber ? 'border-red-500' : ''}
-                      placeholder="12345678"
-                      maxLength={8}
-                    />
-                    {errors.idNumber && <p className="text-sm text-red-500 mt-1">{errors.idNumber}</p>}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="store">Store Number *</Label>
-                    <Input
-                      id="store"
-                      value={formData.storeNumber}
-                      onChange={(e) => handleInputChange('storeNumber', e.target.value)}
-                      className={errors.storeNumber ? 'border-red-500' : ''}
-                      placeholder="Store identification number"
-                    />
-                    {errors.storeNumber && <p className="text-sm text-red-500 mt-1">{errors.storeNumber}</p>}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="till">Till Number *</Label>
-                    <Input
-                      id="till"
-                      value={formData.tillNumber}
-                      onChange={(e) => handleInputChange('tillNumber', e.target.value)}
-                      className={errors.tillNumber ? 'border-red-500' : ''}
-                      placeholder="123456"
-                      maxLength={7}
-                    />
-                    {errors.tillNumber && <p className="text-sm text-red-500 mt-1">{errors.tillNumber}</p>}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="serial">Device Serial Number *</Label>
-                    <div className="flex space-x-2">
-                      <Input
-                        id="serial"
-                        value={formData.serialNumber}
-                        onChange={(e) => handleInputChange('serialNumber', e.target.value)}
-                        className={errors.serialNumber ? 'border-red-500' : ''}
-                        placeholder="Scan or enter manually"
-                        readOnly={isScanning}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={simulateScanning}
-                        disabled={isScanning}
-                        className="flex items-center space-x-1"
-                      >
-                        {isScanning ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : scanComplete ? (
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <Scan className="w-4 h-4" />
-                        )}
-                        <span>{isScanning ? 'Scanning...' : 'Scan'}</span>
-                      </Button>
-                    </div>
-                    {errors.serialNumber && <p className="text-sm text-red-500 mt-1">{errors.serialNumber}</p>}
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-4">
-                  <Button 
-                    type="submit" 
-                    disabled={isSubmitting}
-                    className="bg-mpesa-green hover:bg-mpesa-green-dark px-8"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      'Register Customer'
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Scanning Guide */}
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Camera className="w-5 h-5" />
-                <span>Scanning Guide</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-start space-x-3">
-                  <Badge variant="outline" className="bg-mpesa-green-light text-mpesa-green">1</Badge>
-                  <p className="text-sm">Position device barcode in good lighting</p>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Badge variant="outline" className="bg-mpesa-green-light text-mpesa-green">2</Badge>
-                  <p className="text-sm">Hold camera steady and click scan</p>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Badge variant="outline" className="bg-mpesa-green-light text-mpesa-green">3</Badge>
-                  <p className="text-sm">Verify captured serial number</p>
-                </div>
-              </div>
-
-              <div className="bg-mpesa-green-light p-3 rounded-lg">
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-4 h-4 text-mpesa-green mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-mpesa-green">Note</p>
-                    <p className="text-xs text-mpesa-gray">Ensure all device labels are clearly visible before scanning</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
+    <Card className="bg-white shadow-lg border-0">
+      <CardHeader>
+        <CardTitle className="text-2xl">Customer Till Registration</CardTitle>
+        <CardDescription>Register a new customer's till for M-Pesa services</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="fullName">Full Name</Label>
+            <Input
+              type="text"
+              id="fullName"
+              name="fullName"
+              placeholder="Enter full name"
+              value={formData.fullName}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="phoneNumber">Phone Number (2547...)</Label>
+            <Input
+              type="tel"
+              id="phoneNumber"
+              name="phoneNumber"
+              placeholder="254712345678"
+              value={formData.phoneNumber}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="idNumber">ID Number</Label>
+            <Input
+              type="number"
+              id="idNumber"
+              name="idNumber"
+              placeholder="Enter ID number"
+              value={formData.idNumber}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="tillNumber">Till Number</Label>
+            <Input
+              type="number"
+              id="tillNumber"
+              name="tillNumber"
+              placeholder="Enter till number"
+              value={formData.tillNumber}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="storeNumber">Store Number</Label>
+            <Input
+              type="text"
+              id="storeNumber"
+              name="storeNumber"
+              placeholder="Enter store number"
+              value={formData.storeNumber}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+          <div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="serialNumber">Serial Number</Label>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleScan}
+                disabled={isScanning}
+              >
+                {isScanning ? (
+                  <>
+                    <Camera className="mr-2 h-4 w-4 animate-spin" />
+                    Scanning...
+                  </>
+                ) : (
+                  <>
+                    <Camera className="mr-2 h-4 w-4" />
+                    Scan
+                  </>
+                )}
+              </Button>
+            </div>
+            <Input
+              type="text"
+              id="serialNumber"
+              name="serialNumber"
+              placeholder="Enter serial number"
+              value={formData.serialNumber}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Submitting...' : 'Register Till'}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
 
