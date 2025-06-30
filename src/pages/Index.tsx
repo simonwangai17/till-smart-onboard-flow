@@ -45,7 +45,7 @@ const Index = () => {
 
     switch (currentService) {
       case 'lipa-na-mpesa':
-        return <CustomerRegistration />;
+        return <CustomerRegistration onBack={handleBackToServices} />;
       case 'dashboard':
         return <AgentDashboard />;
       case 'airtime':

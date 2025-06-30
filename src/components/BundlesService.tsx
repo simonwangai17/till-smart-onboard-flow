@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Smartphone } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useToast } from "@/hooks/use-toast";
+import { useSupabaseData } from '@/hooks/useSupabaseData';
 
 interface BundlesServiceProps {
   onBack: () => void;
@@ -17,8 +18,10 @@ const BundlesService = ({ onBack }: BundlesServiceProps) => {
   const [selectedProvider, setSelectedProvider] = useState<string>('');
   const [selectedBundle, setSelectedBundle] = useState<any>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
-  const { balance, deductFromBalance } = useWallet();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { balance } = useWallet();
   const { toast } = useToast();
+  const { purchaseBundle } = useSupabaseData();
 
   const providers = [
     { id: 'safaricom', name: 'Safaricom', color: 'bg-green-600' },
@@ -52,7 +55,7 @@ const BundlesService = ({ onBack }: BundlesServiceProps) => {
     ]
   };
 
-  const handlePurchase = () => {
+  const handlePurchase = async () => {
     if (!phoneNumber || !selectedBundle) {
       toast({
         title: "Error",
@@ -62,19 +65,24 @@ const BundlesService = ({ onBack }: BundlesServiceProps) => {
       return;
     }
 
-    if (deductFromBalance(selectedBundle.price)) {
-      // Save to localStorage for reports
-      const purchases = JSON.parse(localStorage.getItem('bundle-purchases') || '[]');
-      purchases.push({
-        id: Date.now(),
-        type: 'bundle',
-        provider: selectedProvider,
-        bundle: selectedBundle.name,
-        phoneNumber,
-        amount: selectedBundle.price,
-        date: new Date().toISOString()
+    if (balance < selectedBundle.price) {
+      toast({
+        title: "Insufficient Balance",
+        description: `You need KSH ${selectedBundle.price - balance} more to complete this purchase`,
+        variant: "destructive"
       });
-      localStorage.setItem('bundle-purchases', JSON.stringify(purchases));
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      await purchaseBundle({
+        provider: selectedProvider,
+        bundle_name: selectedBundle.name,
+        phone_number: phoneNumber,
+        amount: selectedBundle.price
+      });
 
       toast({
         title: "Success!",
@@ -83,12 +91,15 @@ const BundlesService = ({ onBack }: BundlesServiceProps) => {
 
       setPhoneNumber('');
       setSelectedBundle(null);
-    } else {
+    } catch (error: any) {
+      console.error('Bundle purchase error:', error);
       toast({
-        title: "Insufficient Balance",
-        description: `You need KSH ${selectedBundle.price - balance} more to complete this purchase`,
+        title: "Purchase Failed",
+        description: error.message || "Failed to purchase bundle. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -157,8 +168,12 @@ const BundlesService = ({ onBack }: BundlesServiceProps) => {
                   <span>Selected: {selectedBundle.name}</span>
                   <span>Cost: KSH {selectedBundle.price}</span>
                 </div>
-                <Button onClick={handlePurchase} className="w-full bg-mpesa-green hover:bg-mpesa-green/90">
-                  Purchase Bundle
+                <Button 
+                  onClick={handlePurchase} 
+                  className="w-full bg-mpesa-green hover:bg-mpesa-green/90"
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? 'Processing...' : 'Purchase Bundle'}
                 </Button>
               </CardContent>
             </Card>

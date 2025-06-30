@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Camera } from 'lucide-react';
+import { Camera, ArrowLeft } from 'lucide-react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 
 interface FormData {
@@ -16,7 +17,11 @@ interface FormData {
   serialNumber: string;
 }
 
-const CustomerRegistration = () => {
+interface CustomerRegistrationProps {
+  onBack?: () => void;
+}
+
+const CustomerRegistration = ({ onBack }: CustomerRegistrationProps) => {
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
     phoneNumber: '',
@@ -47,8 +52,17 @@ const CustomerRegistration = () => {
   };
 
   const validateSerialNumber = (serial: string) => {
-    const serialRegex = /^[a-zA-Z0-9]{10,}$/;
+    const serialRegex = /^\d{20}$/;
     return serialRegex.test(serial);
+  };
+
+  const generateSerialNumber = () => {
+    // Generate a 20-digit serial number similar to 89254021394766992005
+    let serial = '892';
+    for (let i = 0; i < 17; i++) {
+      serial += Math.floor(Math.random() * 10).toString();
+    }
+    return serial;
   };
 
   const validateForm = () => {
@@ -86,9 +100,10 @@ const CustomerRegistration = () => {
   const handleScan = () => {
     setIsScanning(true);
     setTimeout(() => {
+      const newSerial = generateSerialNumber();
       setFormData(prevState => ({
         ...prevState,
-        serialNumber: 'SCANNED12345'
+        serialNumber: newSerial
       }));
       setIsScanning(false);
     }, 3000);
@@ -100,7 +115,7 @@ const CustomerRegistration = () => {
     if (!validateForm()) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields correctly.",
+        description: "Please fill in all required fields correctly. Serial number must be 20 digits.",
         variant: "destructive",
       });
       return;
@@ -134,6 +149,7 @@ const CustomerRegistration = () => {
       });
 
     } catch (error: any) {
+      console.error('Till registration error:', error);
       toast({
         title: "Registration Failed",
         description: error.message || "There was an error submitting the registration. Please try again.",
@@ -145,112 +161,125 @@ const CustomerRegistration = () => {
   };
 
   return (
-    <Card className="bg-white shadow-lg border-0">
-      <CardHeader>
-        <CardTitle className="text-2xl">Customer Till Registration</CardTitle>
-        <CardDescription>Register a new customer's till for M-Pesa services</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="fullName">Full Name</Label>
-            <Input
-              type="text"
-              id="fullName"
-              name="fullName"
-              placeholder="Enter full name"
-              value={formData.fullName}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="phoneNumber">Phone Number (2547...)</Label>
-            <Input
-              type="tel"
-              id="phoneNumber"
-              name="phoneNumber"
-              placeholder="254712345678"
-              value={formData.phoneNumber}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="idNumber">ID Number</Label>
-            <Input
-              type="number"
-              id="idNumber"
-              name="idNumber"
-              placeholder="Enter ID number"
-              value={formData.idNumber}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="tillNumber">Till Number</Label>
-            <Input
-              type="number"
-              id="tillNumber"
-              name="tillNumber"
-              placeholder="Enter till number"
-              value={formData.tillNumber}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="storeNumber">Store Number</Label>
-            <Input
-              type="text"
-              id="storeNumber"
-              name="storeNumber"
-              placeholder="Enter store number"
-              value={formData.storeNumber}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-          <div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="serialNumber">Serial Number</Label>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={handleScan}
-                disabled={isScanning}
-              >
-                {isScanning ? (
-                  <>
-                    <Camera className="mr-2 h-4 w-4 animate-spin" />
-                    Scanning...
-                  </>
-                ) : (
-                  <>
-                    <Camera className="mr-2 h-4 w-4" />
-                    Scan
-                  </>
-                )}
-              </Button>
-            </div>
-            <Input
-              type="text"
-              id="serialNumber"
-              name="serialNumber"
-              placeholder="Enter serial number"
-              value={formData.serialNumber}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Submitting...' : 'Register Till'}
+    <div className="space-y-6">
+      {onBack && (
+        <div className="flex items-center space-x-3">
+          <Button variant="ghost" size="sm" onClick={onBack}>
+            <ArrowLeft className="w-4 h-4" />
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Customer Till Registration</h3>
+        </div>
+      )}
+      
+      <Card className="bg-white shadow-lg border-0">
+        <CardHeader>
+          <CardTitle className="text-2xl">Customer Till Registration</CardTitle>
+          <CardDescription>Register a new customer's till for M-Pesa services</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                type="text"
+                id="fullName"
+                name="fullName"
+                placeholder="Enter full name"
+                value={formData.fullName}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="phoneNumber">Phone Number (2547...)</Label>
+              <Input
+                type="tel"
+                id="phoneNumber"
+                name="phoneNumber"
+                placeholder="254712345678"
+                value={formData.phoneNumber}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="idNumber">ID Number</Label>
+              <Input
+                type="number"
+                id="idNumber"
+                name="idNumber"
+                placeholder="Enter ID number"
+                value={formData.idNumber}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="tillNumber">Till Number</Label>
+              <Input
+                type="number"
+                id="tillNumber"
+                name="tillNumber"
+                placeholder="Enter till number"
+                value={formData.tillNumber}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="storeNumber">Store Number</Label>
+              <Input
+                type="text"
+                id="storeNumber"
+                name="storeNumber"
+                placeholder="Enter store number"
+                value={formData.storeNumber}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="serialNumber">Serial Number (20 digits)</Label>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleScan}
+                  disabled={isScanning}
+                >
+                  {isScanning ? (
+                    <>
+                      <Camera className="mr-2 h-4 w-4 animate-spin" />
+                      Scanning...
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="mr-2 h-4 w-4" />
+                      Generate
+                    </>
+                  )}
+                </Button>
+              </div>
+              <Input
+                type="text"
+                id="serialNumber"
+                name="serialNumber"
+                placeholder="89254021394766992005"
+                value={formData.serialNumber}
+                onChange={handleInputChange}
+                maxLength={20}
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">Must be exactly 20 digits</p>
+            </div>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Submitting...' : 'Register Till'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

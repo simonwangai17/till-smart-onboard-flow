@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Phone } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useToast } from "@/hooks/use-toast";
+import { useSupabaseData } from '@/hooks/useSupabaseData';
 
 interface AirtimeServiceProps {
   onBack: () => void;
@@ -16,8 +17,10 @@ const AirtimeService = ({ onBack }: AirtimeServiceProps) => {
   const [selectedProvider, setSelectedProvider] = useState<string>('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [amount, setAmount] = useState('');
-  const { balance, deductFromBalance } = useWallet();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { balance } = useWallet();
   const { toast } = useToast();
+  const { purchaseAirtime } = useSupabaseData();
 
   const providers = [
     { id: 'safaricom', name: 'Safaricom', color: 'bg-green-600' },
@@ -28,30 +31,35 @@ const AirtimeService = ({ onBack }: AirtimeServiceProps) => {
 
   const quickAmounts = [10, 20, 50, 100, 200, 500];
 
-  const handlePurchase = () => {
+  const handlePurchase = async () => {
     const airtimeAmount = parseFloat(amount);
     
-    if (!phoneNumber || !amount || airtimeAmount <= 0) {
+    if (!phoneNumber || !amount || airtimeAmount <= 0 || !selectedProvider) {
       toast({
         title: "Error",
-        description: "Please fill all fields with valid values",
+        description: "Please fill all fields with valid values and select a provider",
         variant: "destructive"
       });
       return;
     }
 
-    if (deductFromBalance(airtimeAmount)) {
-      // Save to localStorage for reports
-      const purchases = JSON.parse(localStorage.getItem('airtime-purchases') || '[]');
-      purchases.push({
-        id: Date.now(),
-        type: 'airtime',
-        provider: selectedProvider,
-        phoneNumber,
-        amount: airtimeAmount,
-        date: new Date().toISOString()
+    if (balance < airtimeAmount) {
+      toast({
+        title: "Insufficient Balance",
+        description: `You need KSH ${airtimeAmount - balance} more to complete this purchase`,
+        variant: "destructive"
       });
-      localStorage.setItem('airtime-purchases', JSON.stringify(purchases));
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      await purchaseAirtime({
+        provider: selectedProvider,
+        phone_number: phoneNumber,
+        amount: airtimeAmount
+      });
 
       toast({
         title: "Success!",
@@ -60,12 +68,15 @@ const AirtimeService = ({ onBack }: AirtimeServiceProps) => {
 
       setPhoneNumber('');
       setAmount('');
-    } else {
+    } catch (error: any) {
+      console.error('Airtime purchase error:', error);
       toast({
-        title: "Insufficient Balance",
-        description: `You need KSH ${airtimeAmount - balance} more to complete this purchase`,
+        title: "Purchase Failed",
+        description: error.message || "Failed to purchase airtime. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -147,8 +158,12 @@ const AirtimeService = ({ onBack }: AirtimeServiceProps) => {
               <span>Amount: KSH {amount || 0}</span>
             </div>
 
-            <Button onClick={handlePurchase} className="w-full bg-mpesa-green hover:bg-mpesa-green/90">
-              Buy Airtime
+            <Button 
+              onClick={handlePurchase} 
+              className="w-full bg-mpesa-green hover:bg-mpesa-green/90"
+              disabled={isProcessing}
+            >
+              {isProcessing ? 'Processing...' : 'Buy Airtime'}
             </Button>
           </CardContent>
         </Card>
