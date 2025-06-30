@@ -1,74 +1,74 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, Download, Eye, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from "@/hooks/use-toast";
 
-interface Submission {
+interface TillRegistration {
   id: string;
-  customerName: string;
-  phoneNumber: string;
-  tillNumber: string;
-  storeNumber: string;
+  customer_name: string;
+  phone_number: string;
+  id_number: string;
+  till_number: string;
+  store_number: string;
+  serial_number: string;
+  agent_id: string;
   status: 'pending' | 'approved' | 'rejected' | 'processing';
-  submittedAt: string;
-  serialNumber: string;
-  agentName: string;
+  created_at: string;
+  updated_at: string;
 }
 
 const AgentDashboard = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [submissions, setSubmissions] = useState<TillRegistration[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data - in real app this would come from Supabase
-  const submissions: Submission[] = [
-    {
-      id: '001',
-      customerName: 'John Doe',
-      phoneNumber: '254712345678',
-      tillNumber: '123456',
-      storeNumber: 'ST001',
-      status: 'approved',
-      submittedAt: '2024-01-15T10:30:00Z',
-      serialNumber: 'SN1234567890',
-      agentName: 'Agent Smith'
-    },
-    {
-      id: '002',
-      customerName: 'Jane Smith',
-      phoneNumber: '254723456789',
-      tillNumber: '234567',
-      storeNumber: 'ST002',
-      status: 'pending',
-      submittedAt: '2024-01-15T11:45:00Z',
-      serialNumber: 'SN2345678901',
-      agentName: 'Agent Smith'
-    },
-    {
-      id: '003',
-      customerName: 'Mike Johnson',
-      phoneNumber: '254734567890',
-      tillNumber: '345678',
-      storeNumber: 'ST003',
-      status: 'processing',
-      submittedAt: '2024-01-15T14:20:00Z',
-      serialNumber: 'SN3456789012',
-      agentName: 'Agent Smith'
-    },
-    {
-      id: '004',
-      customerName: 'Sarah Wilson',
-      phoneNumber: '254745678901',
-      tillNumber: '456789',
-      storeNumber: 'ST004',
-      status: 'rejected',
-      submittedAt: '2024-01-14T16:15:00Z',
-      serialNumber: 'SN4567890123',
-      agentName: 'Agent Smith'
+  useEffect(() => {
+    if (user) {
+      fetchSubmissions();
     }
-  ];
+  }, [user]);
+
+  const fetchSubmissions = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('till_registrations')
+        .select('*')
+        .eq('agent_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching submissions:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load your submissions",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setSubmissions(data || []);
+    } catch (error: any) {
+      console.error('Error fetching submissions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load your submissions",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -101,9 +101,9 @@ const AgentDashboard = () => {
   };
 
   const filteredSubmissions = submissions.filter(submission => {
-    const matchesSearch = submission.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         submission.phoneNumber.includes(searchTerm) ||
-                         submission.tillNumber.includes(searchTerm);
+    const matchesSearch = submission.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         submission.phone_number.includes(searchTerm) ||
+                         submission.till_number.includes(searchTerm);
     const matchesStatus = statusFilter === 'all' || submission.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -115,6 +115,21 @@ const AgentDashboard = () => {
     processing: submissions.filter(s => s.status === 'processing').length,
     rejected: submissions.filter(s => s.status === 'rejected').length
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">Agent Dashboard</h3>
+          <p className="text-mpesa-gray">Track and manage your customer registrations</p>
+        </div>
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-mpesa-green mx-auto"></div>
+          <p className="mt-4 text-mpesa-gray">Loading your submissions...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -173,71 +188,76 @@ const AgentDashboard = () => {
       {/* Submissions Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Submissions</CardTitle>
+          <CardTitle>Your Submissions</CardTitle>
           <CardDescription>
             {filteredSubmissions.length} of {submissions.length} submissions
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredSubmissions.map((submission) => (
-              <div
-                key={submission.id}
-                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-mpesa-green-light rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-mpesa-green">
-                        {submission.customerName.split(' ').map(n => n[0]).join('')}
-                      </span>
+            {filteredSubmissions.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-mpesa-gray">
+                  {submissions.length === 0 
+                    ? "No submissions yet. Start by registering a customer's till!" 
+                    : "No submissions found matching your criteria"
+                  }
+                </p>
+              </div>
+            ) : (
+              filteredSubmissions.map((submission) => (
+                <div
+                  key={submission.id}
+                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-mpesa-green-light rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium text-mpesa-green">
+                          {submission.customer_name.split(' ').map(n => n[0]).join('')}
+                        </span>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-900">{submission.customer_name}</h4>
+                        <p className="text-sm text-mpesa-gray">{submission.phone_number}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge 
+                        variant="outline" 
+                        className={`${getStatusColor(submission.status)} flex items-center space-x-1`}
+                      >
+                        {getStatusIcon(submission.status)}
+                        <span className="capitalize">{submission.status}</span>
+                      </Badge>
+                      <Button variant="ghost" size="sm">
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <p className="text-mpesa-gray">Till Number</p>
+                      <p className="font-medium">{submission.till_number}</p>
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">{submission.customerName}</h4>
-                      <p className="text-sm text-mpesa-gray">{submission.phoneNumber}</p>
+                      <p className="text-mpesa-gray">Store Number</p>
+                      <p className="font-medium">{submission.store_number}</p>
+                    </div>
+                    <div>
+                      <p className="text-mpesa-gray">Serial Number</p>
+                      <p className="font-medium">{submission.serial_number}</p>
+                    </div>
+                    <div>
+                      <p className="text-mpesa-gray">Submitted</p>
+                      <p className="font-medium">
+                        {new Date(submission.created_at).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge 
-                      variant="outline" 
-                      className={`${getStatusColor(submission.status)} flex items-center space-x-1`}
-                    >
-                      {getStatusIcon(submission.status)}
-                      <span className="capitalize">{submission.status}</span>
-                    </Badge>
-                    <Button variant="ghost" size="sm">
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </div>
                 </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <p className="text-mpesa-gray">Till Number</p>
-                    <p className="font-medium">{submission.tillNumber}</p>
-                  </div>
-                  <div>
-                    <p className="text-mpesa-gray">Store Number</p>
-                    <p className="font-medium">{submission.storeNumber}</p>
-                  </div>
-                  <div>
-                    <p className="text-mpesa-gray">Serial Number</p>
-                    <p className="font-medium">{submission.serialNumber}</p>
-                  </div>
-                  <div>
-                    <p className="text-mpesa-gray">Submitted</p>
-                    <p className="font-medium">
-                      {new Date(submission.submittedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {filteredSubmissions.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-mpesa-gray">No submissions found matching your criteria</p>
-              </div>
+              ))
             )}
           </div>
         </CardContent>
