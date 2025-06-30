@@ -49,11 +49,11 @@ const Index = () => {
       case 'dashboard':
         return <AgentDashboard />;
       case 'airtime':
-        return <AirtimeService />;
+        return <AirtimeService onBack={handleBackToServices} />;
       case 'bundles':
-        return <BundlesService />;
+        return <BundlesService onBack={handleBackToServices} />;
       case 'reports':
-        return <ReportsService />;
+        return <ReportsService onBack={handleBackToServices} />;
       default:
         if (userProfile?.role === 'admin') {
           return <AdminPanel />;
@@ -65,10 +65,10 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <MobileOptimizedHeader 
-        userProfile={userProfile}
-        onBackToServices={currentService ? handleBackToServices : undefined}
-        onServiceSelect={handleServiceSelect}
-        onSignOut={signOut}
+        userRole={userProfile?.role}
+        userName={userProfile?.name}
+        onLogout={signOut}
+        onMenuToggle={currentService ? handleBackToServices : undefined}
       />
       
       <main className="container mx-auto px-4 py-6 max-w-6xl">
