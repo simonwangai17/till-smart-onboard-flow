@@ -22,6 +22,7 @@ interface Transaction {
   tillNumber?: string;
   provider?: string;
   bundleName?: string;
+  status?: string;
 }
 
 const ReportsService = ({ onBack }: ReportsServiceProps) => {
@@ -79,17 +80,19 @@ const ReportsService = ({ onBack }: ReportsServiceProps) => {
       // Transform data into unified transaction format
       const allTransactions: Transaction[] = [];
 
-      // Add till registrations (earnings)
+      // Add till registrations (earnings) - only count approved ones for earnings
       if (tillData) {
         tillData.forEach(till => {
+          const commission = till.status === 'approved' ? 100 : 0; // Only approved tills earn commission
           allTransactions.push({
             id: till.id,
             category: 'tills',
-            amount: 100, // Commission amount
+            amount: commission,
             date: till.created_at || new Date().toISOString(),
             customerName: till.customer_name,
             phoneNumber: till.phone_number,
-            tillNumber: till.till_number
+            tillNumber: till.till_number,
+            status: till.status
           });
         });
       }
@@ -178,13 +181,17 @@ const ReportsService = ({ onBack }: ReportsServiceProps) => {
     }
   };
 
+  // Calculate totals - only approved tills count as earnings
   const totalEarnings = transactions
-    .filter(t => t.category === 'tills')
+    .filter(t => t.category === 'tills' && t.amount > 0)
     .reduce((sum, t) => sum + t.amount, 0);
   
   const totalSpent = transactions
     .filter(t => t.category === 'bundles' || t.category === 'airtime')
     .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalTillRegistrations = transactions.filter(t => t.category === 'tills').length;
+  const approvedTillRegistrations = transactions.filter(t => t.category === 'tills' && t.amount > 0).length;
 
   if (loading) {
     return (
@@ -221,11 +228,12 @@ const ReportsService = ({ onBack }: ReportsServiceProps) => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-green-600">KSH {totalEarnings}</p>
             <p className="text-sm text-gray-600">Total Earnings</p>
+            <p className="text-xs text-gray-500">{approvedTillRegistrations} approved tills</p>
           </CardContent>
         </Card>
         <Card>
@@ -238,6 +246,13 @@ const ReportsService = ({ onBack }: ReportsServiceProps) => {
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-mpesa-green">KSH {totalEarnings - totalSpent}</p>
             <p className="text-sm text-gray-600">Net Balance</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-blue-600">{totalTillRegistrations}</p>
+            <p className="text-sm text-gray-600">Till Registrations</p>
+            <p className="text-xs text-gray-500">{approvedTillRegistrations} approved</p>
           </CardContent>
         </Card>
       </div>
@@ -291,12 +306,28 @@ const ReportsService = ({ onBack }: ReportsServiceProps) => {
                       </p>
                       <p className="text-sm text-gray-600">
                         {transaction.phoneNumber || transaction.tillNumber} • {new Date(transaction.date).toLocaleDateString()}
+                        {transaction.status && transaction.category === 'tills' && (
+                          <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                            transaction.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            transaction.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            transaction.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                            'bg-blue-100 text-blue-800'
+                          }`}>
+                            {transaction.status}
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`font-semibold ${transaction.category === 'tills' ? 'text-green-600' : 'text-red-600'}`}>
-                      {transaction.category === 'tills' ? '+' : '-'}KSH {transaction.amount}
+                    <p className={`font-semibold ${
+                      transaction.category === 'tills' && transaction.amount > 0 ? 'text-green-600' : 
+                      transaction.category === 'tills' && transaction.amount === 0 ? 'text-gray-600' :
+                      'text-red-600'
+                    }`}>
+                      {transaction.category === 'tills' && transaction.amount > 0 ? '+' : 
+                       transaction.category === 'tills' && transaction.amount === 0 ? '' : '-'}
+                      KSH {transaction.amount}
                     </p>
                     <Badge variant="outline" className="text-xs">
                       {transaction.category}
