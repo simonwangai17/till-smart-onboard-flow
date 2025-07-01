@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +7,7 @@ export const useSupabaseData = () => {
   const [tillRegistrations, setTillRegistrations] = useState([]);
   const [airtimePurchases, setAirtimePurchases] = useState([]);
   const [bundlePurchases, setBundlePurchases] = useState([]);
+  const [tillPayments, setTillPayments] = useState([]);
   const [walletBalance, setWalletBalance] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -64,13 +64,28 @@ export const useSupabaseData = () => {
     }
   };
 
+  const fetchTillPayments = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('till_payments')
+      .select('*')
+      .eq('agent_id', user.id)
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setTillPayments(data);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       Promise.all([
         fetchTillRegistrations(),
         fetchWalletBalance(),
         fetchAirtimePurchases(),
-        fetchBundlePurchases()
+        fetchBundlePurchases(),
+        fetchTillPayments()
       ]).finally(() => setLoading(false));
     } else {
       setLoading(false);
@@ -173,20 +188,42 @@ export const useSupabaseData = () => {
     return data;
   };
 
+  const makeTillPayment = async (paymentData: any) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('till_payments')
+      .insert([{
+        ...paymentData,
+        agent_id: user.id
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await fetchTillPayments();
+    
+    return data;
+  };
+
   return {
     tillRegistrations,
     airtimePurchases,
     bundlePurchases,
+    tillPayments,
     walletBalance,
     loading,
     submitTillRegistration,
     purchaseAirtime,
     purchaseBundle,
+    makeTillPayment,
     refetch: () => {
       fetchTillRegistrations();
       fetchWalletBalance();
       fetchAirtimePurchases();
       fetchBundlePurchases();
+      fetchTillPayments();
     }
   };
 };

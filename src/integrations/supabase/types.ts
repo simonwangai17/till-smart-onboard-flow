@@ -109,6 +109,41 @@ export type Database = {
         }
         Relationships: []
       }
+      till_payments: {
+        Row: {
+          agent_id: string
+          amount: number
+          created_at: string
+          id: string
+          till_number: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          amount: number
+          created_at?: string
+          id?: string
+          till_number: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          till_number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "till_payments_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       till_registrations: {
         Row: {
           agent_id: string | null

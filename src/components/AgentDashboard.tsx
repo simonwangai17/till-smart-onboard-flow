@@ -3,11 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, Download, Eye, Clock, CheckCircle, XCircle, AlertTriangle, FileText } from 'lucide-react';
+import { Search, Filter, Download, Eye, Clock, CheckCircle, XCircle, AlertTriangle, FileText, CreditCard, BarChart3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from "@/hooks/use-toast";
 import ApprovedTillsList from './ApprovedTillsList';
+import TillPayment from './TillPayment';
+import PaymentReports from './PaymentReports';
 
 interface TillRegistration {
   id: string;
@@ -31,6 +33,8 @@ const AgentDashboard = () => {
   const [submissions, setSubmissions] = useState<TillRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [showApprovedTills, setShowApprovedTills] = useState(false);
+  const [showTillPayment, setShowTillPayment] = useState(false);
+  const [showPaymentReports, setShowPaymentReports] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -142,6 +146,14 @@ const AgentDashboard = () => {
     return <ApprovedTillsList onBack={() => setShowApprovedTills(false)} />;
   }
 
+  if (showTillPayment) {
+    return <TillPayment onBack={() => setShowTillPayment(false)} />;
+  }
+
+  if (showPaymentReports) {
+    return <PaymentReports onBack={() => setShowPaymentReports(false)} />;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -149,13 +161,31 @@ const AgentDashboard = () => {
           <h3 className="text-2xl font-bold text-gray-900 mb-2">Agent Dashboard</h3>
           <p className="text-mpesa-gray">Track and manage your customer registrations</p>
         </div>
-        <Button
-          onClick={() => setShowApprovedTills(true)}
-          className="bg-mpesa-green hover:bg-mpesa-green/90"
-        >
-          <FileText className="w-4 h-4 mr-2" />
-          Registrations
-        </Button>
+        <div className="flex space-x-2">
+          <Button
+            onClick={() => setShowApprovedTills(true)}
+            className="bg-mpesa-green hover:bg-mpesa-green/90"
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            Registrations
+          </Button>
+          <Button
+            onClick={() => setShowTillPayment(true)}
+            variant="outline"
+            className="border-mpesa-green text-mpesa-green hover:bg-mpesa-green hover:text-white"
+          >
+            <CreditCard className="w-4 h-4 mr-2" />
+            Make Payment
+          </Button>
+          <Button
+            onClick={() => setShowPaymentReports(true)}
+            variant="outline"
+            className="border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white"
+          >
+            <BarChart3 className="w-4 h-4 mr-2" />
+            Payments
+          </Button>
+        </div>
       </div>
 
       {/* Status Overview */}
