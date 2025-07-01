@@ -1,13 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, Download, Eye, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Search, Filter, Download, Eye, Clock, CheckCircle, XCircle, AlertTriangle, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from "@/hooks/use-toast";
+import ApprovedTillsList from './ApprovedTillsList';
 
 interface TillRegistration {
   id: string;
@@ -30,6 +30,7 @@ const AgentDashboard = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [submissions, setSubmissions] = useState<TillRegistration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showApprovedTills, setShowApprovedTills] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -137,11 +138,24 @@ const AgentDashboard = () => {
     );
   }
 
+  if (showApprovedTills) {
+    return <ApprovedTillsList onBack={() => setShowApprovedTills(false)} />;
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">Agent Dashboard</h3>
-        <p className="text-mpesa-gray">Track and manage your customer registrations</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">Agent Dashboard</h3>
+          <p className="text-mpesa-gray">Track and manage your customer registrations</p>
+        </div>
+        <Button
+          onClick={() => setShowApprovedTills(true)}
+          className="bg-mpesa-green hover:bg-mpesa-green/90"
+        >
+          <FileText className="w-4 h-4 mr-2" />
+          Registrations
+        </Button>
       </div>
 
       {/* Status Overview */}
