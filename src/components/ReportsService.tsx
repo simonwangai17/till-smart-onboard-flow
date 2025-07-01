@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,17 +33,26 @@ const ReportsService = ({ onBack }: ReportsServiceProps) => {
 
   useEffect(() => {
     if (user) {
+      console.log('User authenticated, fetching transactions for user:', user.id);
       fetchTransactions();
+    } else {
+      console.log('No user authenticated');
+      setLoading(false);
     }
   }, [user]);
 
   const fetchTransactions = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user found, cannot fetch transactions');
+      return;
+    }
     
     try {
       setLoading(true);
+      console.log('Starting to fetch transactions...');
       
       // Fetch till registrations
+      console.log('Fetching till registrations...');
       const { data: tillData, error: tillError } = await supabase
         .from('till_registrations')
         .select('*')
@@ -53,9 +61,17 @@ const ReportsService = ({ onBack }: ReportsServiceProps) => {
 
       if (tillError) {
         console.error('Error fetching till registrations:', tillError);
+        toast({
+          title: "Error",
+          description: "Failed to load till registrations",
+          variant: "destructive"
+        });
+      } else {
+        console.log('Till registrations fetched:', tillData?.length || 0, 'records');
       }
 
       // Fetch airtime purchases
+      console.log('Fetching airtime purchases...');
       const { data: airtimeData, error: airtimeError } = await supabase
         .from('airtime_purchases')
         .select('*')
@@ -64,9 +80,17 @@ const ReportsService = ({ onBack }: ReportsServiceProps) => {
 
       if (airtimeError) {
         console.error('Error fetching airtime purchases:', airtimeError);
+        toast({
+          title: "Error",
+          description: "Failed to load airtime purchases",
+          variant: "destructive"
+        });
+      } else {
+        console.log('Airtime purchases fetched:', airtimeData?.length || 0, 'records');
       }
 
       // Fetch bundle purchases
+      console.log('Fetching bundle purchases...');
       const { data: bundleData, error: bundleError } = await supabase
         .from('bundle_purchases')
         .select('*')
@@ -75,6 +99,13 @@ const ReportsService = ({ onBack }: ReportsServiceProps) => {
 
       if (bundleError) {
         console.error('Error fetching bundle purchases:', bundleError);
+        toast({
+          title: "Error",
+          description: "Failed to load bundle purchases",
+          variant: "destructive"
+        });
+      } else {
+        console.log('Bundle purchases fetched:', bundleData?.length || 0, 'records');
       }
 
       // Transform data into unified transaction format
@@ -82,6 +113,7 @@ const ReportsService = ({ onBack }: ReportsServiceProps) => {
 
       // Add till registrations (earnings) - only count approved ones for earnings
       if (tillData) {
+        console.log('Processing till registrations...');
         tillData.forEach(till => {
           const commission = till.status === 'approved' ? 100 : 0; // Only approved tills earn commission
           allTransactions.push({
@@ -95,10 +127,12 @@ const ReportsService = ({ onBack }: ReportsServiceProps) => {
             status: till.status
           });
         });
+        console.log('Till registrations processed:', tillData.length, 'records');
       }
 
       // Add airtime purchases (expenses)
       if (airtimeData) {
+        console.log('Processing airtime purchases...');
         airtimeData.forEach(airtime => {
           allTransactions.push({
             id: airtime.id,
@@ -109,10 +143,12 @@ const ReportsService = ({ onBack }: ReportsServiceProps) => {
             provider: airtime.provider
           });
         });
+        console.log('Airtime purchases processed:', airtimeData.length, 'records');
       }
 
       // Add bundle purchases (expenses)
       if (bundleData) {
+        console.log('Processing bundle purchases...');
         bundleData.forEach(bundle => {
           allTransactions.push({
             id: bundle.id,
@@ -124,12 +160,24 @@ const ReportsService = ({ onBack }: ReportsServiceProps) => {
             bundleName: bundle.bundle_name
           });
         });
+        console.log('Bundle purchases processed:', bundleData.length, 'records');
       }
 
       // Sort by date (newest first)
       allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       
+      console.log('Total transactions processed:', allTransactions.length);
+      console.log('Transactions:', allTransactions);
+      
       setTransactions(allTransactions);
+
+      if (allTransactions.length === 0) {
+        toast({
+          title: "No Data",
+          description: "No transactions found. Start by registering a till or making purchases!",
+          variant: "default"
+        });
+      }
     } catch (error: any) {
       console.error('Error fetching transactions:', error);
       toast({
@@ -192,6 +240,14 @@ const ReportsService = ({ onBack }: ReportsServiceProps) => {
 
   const totalTillRegistrations = transactions.filter(t => t.category === 'tills').length;
   const approvedTillRegistrations = transactions.filter(t => t.category === 'tills' && t.amount > 0).length;
+
+  console.log('Calculated totals:', {
+    totalEarnings,
+    totalSpent,
+    netBalance: totalEarnings - totalSpent,
+    totalTillRegistrations,
+    approvedTillRegistrations
+  });
 
   if (loading) {
     return (
