@@ -63,14 +63,20 @@ const AdminPanel = () => {
         return;
       }
 
-      setTillRegistrations(data || []);
+      // Type assertion to ensure status field matches our interface
+      const typedData = (data || []).map(item => ({
+        ...item,
+        status: item.status as 'pending' | 'approved' | 'rejected' | 'processing'
+      })) as TillRegistration[];
+
+      setTillRegistrations(typedData);
       
       // Count approved registrations today
       const today = new Date().toISOString().split('T')[0];
-      const approvedTodayCount = data?.filter(reg => 
+      const approvedTodayCount = typedData.filter(reg => 
         reg.status === 'approved' && 
         reg.updated_at?.startsWith(today)
-      ).length || 0;
+      ).length;
       setApprovedToday(approvedTodayCount);
       
     } catch (error: any) {

@@ -57,7 +57,13 @@ const AgentDashboard = () => {
         return;
       }
 
-      setSubmissions(data || []);
+      // Type assertion to ensure status field matches our interface
+      const typedData = (data || []).map(item => ({
+        ...item,
+        status: item.status as 'pending' | 'approved' | 'rejected' | 'processing'
+      })) as TillRegistration[];
+
+      setSubmissions(typedData);
     } catch (error: any) {
       console.error('Error fetching submissions:', error);
       toast({
