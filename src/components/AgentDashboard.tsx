@@ -129,43 +129,83 @@ const AgentDashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h3 className="text-2xl font-bold text-gray-900 mb-2">Agent Dashboard</h3>
           <p className="text-gray-600">Track and manage your customer registrations</p>
         </div>
-        <div className="flex space-x-2">
+        
+        {/* Primary Action Buttons */}
+        <div className="flex flex-wrap gap-2">
           <Button
             onClick={() => setShowWallet(true)}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
           >
-            <WalletIcon className="w-4 h-4 mr-2" />
+            <WalletIcon className="w-4 h-4" />
             Wallet (KSH {walletBalance.toLocaleString()})
           </Button>
-          <Button
-            onClick={() => setShowApprovedTills(true)}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            <FileText className="w-4 h-4 mr-2" />
-            Registrations
-          </Button>
+          
           <Button
             onClick={() => setShowTillPayment(true)}
-            variant="outline"
-            className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
+            className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
           >
-            <CreditCard className="w-4 h-4 mr-2" />
+            <CreditCard className="w-4 h-4" />
             Make Payment
           </Button>
+          
           <Button
             onClick={() => setShowPaymentReports(true)}
             variant="outline"
-            className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
+            className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white flex items-center gap-2"
           >
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Payments
+            <BarChart3 className="w-4 h-4" />
+            Payment Reports
+          </Button>
+          
+          <Button
+            onClick={() => setShowApprovedTills(true)}
+            variant="outline"
+            className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white flex items-center gap-2"
+          >
+            <FileText className="w-4 h-4" />
+            Registrations
           </Button>
         </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border-green-200">
+          <CardContent className="p-4 text-center">
+            <WalletIcon className="w-8 h-8 text-green-600 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-green-600">KSH {walletBalance.toLocaleString()}</p>
+            <p className="text-sm text-gray-600">Wallet Balance</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-blue-200">
+          <CardContent className="p-4 text-center">
+            <FileText className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-blue-600">{statusCounts.approved}</p>
+            <p className="text-sm text-gray-600">Approved Tills</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-yellow-200">
+          <CardContent className="p-4 text-center">
+            <Clock className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-yellow-600">{statusCounts.pending}</p>
+            <p className="text-sm text-gray-600">Pending</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-red-200">
+          <CardContent className="p-4 text-center">
+            <CreditCard className="w-8 h-8 text-red-600 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-red-600">{statusCounts.all}</p>
+            <p className="text-sm text-gray-600">Total Submissions</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Status Overview */}

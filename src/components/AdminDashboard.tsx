@@ -28,33 +28,37 @@ const AdminDashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h3 className="text-2xl font-bold text-gray-900 mb-2">Admin Dashboard</h3>
           <p className="text-gray-600">Manage all system operations</p>
         </div>
-        <div className="flex space-x-2">
+        
+        {/* Primary Action Buttons */}
+        <div className="flex flex-wrap gap-2">
           <Button
             onClick={() => setShowWallet(true)}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
           >
-            <WalletIcon className="w-4 h-4 mr-2" />
+            <WalletIcon className="w-4 h-4" />
             Wallet (KSH {walletBalance.toLocaleString()})
           </Button>
+          
           <Button
             onClick={() => setShowTillPayment(true)}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
           >
-            <CreditCard className="w-4 h-4 mr-2" />
+            <CreditCard className="w-4 h-4" />
             Make Payment
           </Button>
+          
           <Button
             onClick={() => setShowPaymentReports(true)}
             variant="outline"
-            className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
+            className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white flex items-center gap-2"
           >
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Payments
+            <BarChart3 className="w-4 h-4" />
+            Payment Reports
           </Button>
         </div>
       </div>
@@ -120,7 +124,7 @@ const AdminDashboard = () => {
             <Button 
               onClick={() => setShowTillPayment(true)}
               variant="outline" 
-              className="h-20 flex flex-col space-y-2 border-yellow-600 text-yellow-600 hover:bg-yellow-600 hover:text-white"
+              className="h-20 flex flex-col space-y-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
             >
               <CreditCard className="w-6 h-6" />
               <span>Process Payments</span>
@@ -129,7 +133,7 @@ const AdminDashboard = () => {
             <Button 
               onClick={() => setShowPaymentReports(true)}
               variant="outline" 
-              className="h-20 flex flex-col space-y-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
+              className="h-20 flex flex-col space-y-2 border-yellow-600 text-yellow-600 hover:bg-yellow-600 hover:text-white"
             >
               <BarChart3 className="w-6 h-6" />
               <span>Analytics</span>
