@@ -2,13 +2,17 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, CreditCard, BarChart3, Users } from 'lucide-react';
+import { FileText, CreditCard, BarChart3, Users, Wallet as WalletIcon } from 'lucide-react';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
 import TillPayment from './TillPayment';
 import PaymentReports from './PaymentReports';
+import Wallet from './Wallet';
 
 const AdminDashboard = () => {
+  const { walletBalance } = useSupabaseData();
   const [showTillPayment, setShowTillPayment] = useState(false);
   const [showPaymentReports, setShowPaymentReports] = useState(false);
+  const [showWallet, setShowWallet] = useState(false);
 
   if (showTillPayment) {
     return <TillPayment onBack={() => setShowTillPayment(false)} />;
@@ -16,6 +20,10 @@ const AdminDashboard = () => {
 
   if (showPaymentReports) {
     return <PaymentReports onBack={() => setShowPaymentReports(false)} />;
+  }
+
+  if (showWallet) {
+    return <Wallet onBack={() => setShowWallet(false)} />;
   }
 
   return (
@@ -26,6 +34,13 @@ const AdminDashboard = () => {
           <p className="text-gray-600">Manage all system operations</p>
         </div>
         <div className="flex space-x-2">
+          <Button
+            onClick={() => setShowWallet(true)}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            <WalletIcon className="w-4 h-4 mr-2" />
+            Wallet (KSH {walletBalance.toLocaleString()})
+          </Button>
           <Button
             onClick={() => setShowTillPayment(true)}
             className="bg-green-600 hover:bg-green-700 text-white"
@@ -72,9 +87,9 @@ const AdminDashboard = () => {
 
         <Card className="border-red-200">
           <CardContent className="p-4 text-center">
-            <BarChart3 className="w-8 h-8 text-red-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-red-600">KSH 125,000</p>
-            <p className="text-sm text-gray-600">Total Volume</p>
+            <WalletIcon className="w-8 h-8 text-red-600 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-red-600">KSH {walletBalance.toLocaleString()}</p>
+            <p className="text-sm text-gray-600">Wallet Balance</p>
           </CardContent>
         </Card>
       </div>
@@ -103,6 +118,7 @@ const AdminDashboard = () => {
             </Button>
             
             <Button 
+              onClick={() => setShowTillPayment(true)}
               variant="outline" 
               className="h-20 flex flex-col space-y-2 border-yellow-600 text-yellow-600 hover:bg-yellow-600 hover:text-white"
             >
@@ -111,6 +127,7 @@ const AdminDashboard = () => {
             </Button>
             
             <Button 
+              onClick={() => setShowPaymentReports(true)}
               variant="outline" 
               className="h-20 flex flex-col space-y-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
             >

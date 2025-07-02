@@ -8,6 +8,7 @@ import { Search, Filter, Download, Eye, Clock, CheckCircle, XCircle, AlertTriang
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from "@/hooks/use-toast";
+import { useSupabaseData } from '@/hooks/useSupabaseData';
 import ApprovedTillsList from './ApprovedTillsList';
 import TillPayment from './TillPayment';
 import PaymentReports from './PaymentReports';
@@ -30,76 +31,24 @@ interface TillRegistration {
 const AgentDashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { walletBalance, tillRegistrations, loading } = useSupabaseData();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [submissions, setSubmissions] = useState<TillRegistration[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showApprovedTills, setShowApprovedTills] = useState(false);
   const [showTillPayment, setShowTillPayment] = useState(false);
   const [showPaymentReports, setShowPaymentReports] = useState(false);
   const [showWallet, setShowWallet] = useState(false);
-  const [walletBalance, setWalletBalance] = useState(0);
 
   useEffect(() => {
-    if (user) {
-      fetchSubmissions();
-      fetchWalletBalance();
-    }
-  }, [user]);
-
-  const fetchWalletBalance = async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .rpc('get_wallet_balance', { user_id: user.id });
-      
-      if (!error && data !== null) {
-        setWalletBalance(Number(data));
-      }
-    } catch (error) {
-      console.error('Error fetching wallet balance:', error);
-    }
-  };
-
-  const fetchSubmissions = async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('till_registrations')
-        .select('*')
-        .eq('agent_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching submissions:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load your submissions",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Type assertion to ensure status field matches our interface
-      const typedData = (data || []).map(item => ({
+    if (tillRegistrations) {
+      const typedData = tillRegistrations.map((item: any) => ({
         ...item,
         status: item.status as 'pending' | 'approved' | 'rejected' | 'processing'
       })) as TillRegistration[];
-
       setSubmissions(typedData);
-    } catch (error: any) {
-      console.error('Error fetching submissions:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load your submissions",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [tillRegistrations]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -175,7 +124,7 @@ const AgentDashboard = () => {
   }
 
   if (showWallet) {
-    return <Wallet onBack={() => setShowWallet(false)} walletBalance={walletBalance} />;
+    return <Wallet onBack={() => setShowWallet(false)} />;
   }
 
   return (
@@ -191,7 +140,7 @@ const AgentDashboard = () => {
             className="bg-green-600 hover:bg-green-700 text-white"
           >
             <WalletIcon className="w-4 h-4 mr-2" />
-            Wallet (KSH {walletBalance})
+            Wallet (KSH {walletBalance.toLocaleString()})
           </Button>
           <Button
             onClick={() => setShowApprovedTills(true)}

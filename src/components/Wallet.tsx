@@ -7,12 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Wallet as WalletIcon, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
 
 interface WalletProps {
   onBack: () => void;
-  walletBalance: number;
 }
 
 interface PayoutData {
@@ -21,21 +19,10 @@ interface PayoutData {
   amount: number;
 }
 
-interface Transaction {
-  id: string;
-  transaction_type: string;
-  amount: number;
-  description: string;
-  created_at: string;
-}
-
-const Wallet = ({ onBack, walletBalance }: WalletProps) => {
-  const { user } = useAuth();
+const Wallet = ({ onBack }: WalletProps) => {
   const { toast } = useToast();
+  const { walletBalance, payouts, requestPayout, refetch } = useSupabaseData();
   const [showPayoutForm, setShowPayoutForm] = useState(false);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [payouts, setPayouts] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [payoutData, setPayoutData] = useState<PayoutData>({
     name: '',
@@ -44,54 +31,11 @@ const Wallet = ({ onBack, walletBalance }: WalletProps) => {
   });
 
   useEffect(() => {
-    if (user) {
-      fetchWalletData();
-    }
-  }, [user]);
-
-  useEffect(() => {
     setPayoutData(prev => ({ ...prev, amount: walletBalance }));
   }, [walletBalance]);
 
-  const fetchWalletData = async () => {
-    if (!user) return;
-    
-    try {
-      // Fetch wallet transactions
-      const { data: transactionData, error: transactionError } = await supabase
-        .from('wallet_transactions')
-        .select('*')
-        .eq('agent_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (transactionError) throw transactionError;
-
-      // Fetch payouts
-      const { data: payoutData, error: payoutError } = await supabase
-        .from('payouts')
-        .select('*')
-        .eq('agent_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (payoutError) throw payoutError;
-
-      setTransactions(transactionData || []);
-      setPayouts(payoutData || []);
-    } catch (error: any) {
-      console.error('Error fetching wallet data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load wallet data",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handlePayout = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
 
     if (payoutData.amount > walletBalance) {
       toast({
@@ -104,16 +48,11 @@ const Wallet = ({ onBack, walletBalance }: WalletProps) => {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('payouts')
-        .insert([{
-          agent_id: user.id,
-          name: payoutData.name,
-          payment_number: payoutData.payment_number,
-          amount: payoutData.amount
-        }]);
-
-      if (error) throw error;
+      await requestPayout({
+        name: payoutData.name,
+        payment_number: payoutData.payment_number,
+        amount: payoutData.amount
+      });
 
       toast({
         title: "Payout Requested",
@@ -122,7 +61,7 @@ const Wallet = ({ onBack, walletBalance }: WalletProps) => {
 
       setShowPayoutForm(false);
       setPayoutData({ name: '', payment_number: '', amount: walletBalance });
-      fetchWalletData();
+      refetch();
     } catch (error: any) {
       console.error('Payout error:', error);
       toast({
@@ -134,31 +73,6 @@ const Wallet = ({ onBack, walletBalance }: WalletProps) => {
       setSubmitting(false);
     }
   };
-
-  const totalEarnings = transactions
-    .filter(t => t.transaction_type === 'earning')
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-
-  const totalSpending = transactions
-    .filter(t => t.transaction_type === 'expense')
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center space-x-3">
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <h3 className="text-2xl font-bold text-gray-900">Wallet</h3>
-        </div>
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading wallet data...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -180,31 +94,13 @@ const Wallet = ({ onBack, walletBalance }: WalletProps) => {
       </div>
 
       {/* Wallet Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-green-200">
-          <CardContent className="p-4 text-center">
-            <WalletIcon className="w-8 h-8 text-green-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-green-600">KSH {walletBalance}</p>
-            <p className="text-sm text-gray-600">Available Balance</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-blue-200">
-          <CardContent className="p-4 text-center">
-            <TrendingUp className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-blue-600">KSH {totalEarnings}</p>
-            <p className="text-sm text-gray-600">Total Earnings</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-red-200">
-          <CardContent className="p-4 text-center">
-            <TrendingDown className="w-8 h-8 text-red-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-red-600">KSH {totalSpending}</p>
-            <p className="text-sm text-gray-600">Total Spending</p>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="border-green-200">
+        <CardContent className="p-6 text-center">
+          <WalletIcon className="w-12 h-12 text-green-600 mx-auto mb-4" />
+          <p className="text-3xl font-bold text-green-600 mb-2">KSH {walletBalance.toLocaleString()}</p>
+          <p className="text-gray-600">Available Balance</p>
+        </CardContent>
+      </Card>
 
       {/* Payout Form */}
       {showPayoutForm && (
@@ -250,7 +146,7 @@ const Wallet = ({ onBack, walletBalance }: WalletProps) => {
                   min={1}
                 />
                 <p className="text-sm text-gray-500 mt-1">
-                  Maximum available: KSH {walletBalance}
+                  Maximum available: KSH {walletBalance.toLocaleString()}
                 </p>
               </div>
 
@@ -275,41 +171,6 @@ const Wallet = ({ onBack, walletBalance }: WalletProps) => {
         </Card>
       )}
 
-      {/* Recent Transactions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {transactions.length === 0 ? (
-              <p className="text-center text-gray-500 py-4">No transactions found</p>
-            ) : (
-              transactions.slice(0, 10).map((transaction) => (
-                <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{transaction.description}</p>
-                    <p className="text-sm text-gray-600">
-                      {new Date(transaction.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-semibold ${
-                      transaction.transaction_type === 'earning' ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {transaction.transaction_type === 'earning' ? '+' : '-'}KSH {transaction.amount}
-                    </p>
-                    <Badge variant="outline" className="text-xs">
-                      {transaction.transaction_type}
-                    </Badge>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Payout History */}
       {payouts.length > 0 && (
         <Card>
@@ -328,7 +189,7 @@ const Wallet = ({ onBack, walletBalance }: WalletProps) => {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-gray-900">KSH {payout.amount}</p>
+                    <p className="font-semibold text-gray-900">KSH {payout.amount.toLocaleString()}</p>
                     <Badge 
                       variant="outline" 
                       className={`text-xs ${
