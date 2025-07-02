@@ -1,15 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, Download, Eye, Clock, CheckCircle, XCircle, AlertTriangle, FileText, CreditCard, BarChart3 } from 'lucide-react';
+import { Search, Filter, Download, Eye, Clock, CheckCircle, XCircle, AlertTriangle, FileText, CreditCard, BarChart3, Wallet as WalletIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from "@/hooks/use-toast";
 import ApprovedTillsList from './ApprovedTillsList';
 import TillPayment from './TillPayment';
 import PaymentReports from './PaymentReports';
+import Wallet from './Wallet';
 
 interface TillRegistration {
   id: string;
@@ -35,12 +37,30 @@ const AgentDashboard = () => {
   const [showApprovedTills, setShowApprovedTills] = useState(false);
   const [showTillPayment, setShowTillPayment] = useState(false);
   const [showPaymentReports, setShowPaymentReports] = useState(false);
+  const [showWallet, setShowWallet] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
 
   useEffect(() => {
     if (user) {
       fetchSubmissions();
+      fetchWalletBalance();
     }
   }, [user]);
+
+  const fetchWalletBalance = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .rpc('get_wallet_balance', { user_id: user.id });
+      
+      if (!error && data !== null) {
+        setWalletBalance(Number(data));
+      }
+    } catch (error) {
+      console.error('Error fetching wallet balance:', error);
+    }
+  };
 
   const fetchSubmissions = async () => {
     if (!user) return;
@@ -132,11 +152,11 @@ const AgentDashboard = () => {
       <div className="space-y-6">
         <div>
           <h3 className="text-2xl font-bold text-gray-900 mb-2">Agent Dashboard</h3>
-          <p className="text-mpesa-gray">Track and manage your customer registrations</p>
+          <p className="text-gray-600">Track and manage your customer registrations</p>
         </div>
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-mpesa-green mx-auto"></div>
-          <p className="mt-4 text-mpesa-gray">Loading your submissions...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your submissions...</p>
         </div>
       </div>
     );
@@ -154,17 +174,28 @@ const AgentDashboard = () => {
     return <PaymentReports onBack={() => setShowPaymentReports(false)} />;
   }
 
+  if (showWallet) {
+    return <Wallet onBack={() => setShowWallet(false)} walletBalance={walletBalance} />;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-2xl font-bold text-gray-900 mb-2">Agent Dashboard</h3>
-          <p className="text-mpesa-gray">Track and manage your customer registrations</p>
+          <p className="text-gray-600">Track and manage your customer registrations</p>
         </div>
         <div className="flex space-x-2">
           <Button
+            onClick={() => setShowWallet(true)}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            <WalletIcon className="w-4 h-4 mr-2" />
+            Wallet (KSH {walletBalance})
+          </Button>
+          <Button
             onClick={() => setShowApprovedTills(true)}
-            className="bg-mpesa-green hover:bg-mpesa-green/90"
+            className="bg-green-600 hover:bg-green-700 text-white"
           >
             <FileText className="w-4 h-4 mr-2" />
             Registrations
@@ -172,7 +203,7 @@ const AgentDashboard = () => {
           <Button
             onClick={() => setShowTillPayment(true)}
             variant="outline"
-            className="border-mpesa-green text-mpesa-green hover:bg-mpesa-green hover:text-white"
+            className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
           >
             <CreditCard className="w-4 h-4 mr-2" />
             Make Payment
@@ -180,7 +211,7 @@ const AgentDashboard = () => {
           <Button
             onClick={() => setShowPaymentReports(true)}
             variant="outline"
-            className="border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white"
+            className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
           >
             <BarChart3 className="w-4 h-4 mr-2" />
             Payments
@@ -194,13 +225,13 @@ const AgentDashboard = () => {
           <Card 
             key={status}
             className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-              statusFilter === status ? 'ring-2 ring-mpesa-green' : ''
+              statusFilter === status ? 'ring-2 ring-green-600' : ''
             }`}
             onClick={() => setStatusFilter(status)}
           >
             <CardContent className="p-4 text-center">
               <p className="text-2xl font-bold text-gray-900">{count}</p>
-              <p className="text-sm text-mpesa-gray capitalize">{status}</p>
+              <p className="text-sm text-gray-600 capitalize">{status}</p>
             </CardContent>
           </Card>
         ))}
@@ -217,16 +248,16 @@ const AgentDashboard = () => {
                   placeholder="Search by name, phone, or till number..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 border-green-300 focus:border-green-500"
                 />
               </div>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white">
                 <Filter className="w-4 h-4 mr-2" />
                 Filter
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white">
                 <Download className="w-4 h-4 mr-2" />
                 Export
               </Button>
@@ -247,7 +278,7 @@ const AgentDashboard = () => {
           <div className="space-y-4">
             {filteredSubmissions.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-mpesa-gray">
+                <p className="text-gray-600">
                   {submissions.length === 0 
                     ? "No submissions yet. Start by registering a customer's till!" 
                     : "No submissions found matching your criteria"
@@ -262,14 +293,14 @@ const AgentDashboard = () => {
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-mpesa-green-light rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-mpesa-green">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium text-green-600">
                           {submission.customer_name.split(' ').map(n => n[0]).join('')}
                         </span>
                       </div>
                       <div>
                         <h4 className="font-medium text-gray-900">{submission.customer_name}</h4>
-                        <p className="text-sm text-mpesa-gray">{submission.phone_number}</p>
+                        <p className="text-sm text-gray-600">{submission.phone_number}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -288,19 +319,19 @@ const AgentDashboard = () => {
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <p className="text-mpesa-gray">Till Number</p>
+                      <p className="text-gray-600">Till Number</p>
                       <p className="font-medium">{submission.till_number}</p>
                     </div>
                     <div>
-                      <p className="text-mpesa-gray">Store Number</p>
+                      <p className="text-gray-600">Store Number</p>
                       <p className="font-medium">{submission.store_number}</p>
                     </div>
                     <div>
-                      <p className="text-mpesa-gray">Serial Number</p>
+                      <p className="text-gray-600">Serial Number</p>
                       <p className="font-medium">{submission.serial_number}</p>
                     </div>
                     <div>
-                      <p className="text-mpesa-gray">Submitted</p>
+                      <p className="text-gray-600">Submitted</p>
                       <p className="font-medium">
                         {new Date(submission.created_at).toLocaleDateString()}
                       </p>
